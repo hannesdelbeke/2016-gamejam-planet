@@ -4,14 +4,18 @@ using System.Collections;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField]
-    MeshCollider PlanetSurface;
-
-    [SerializeField]
     LayerMask PlanetLayer;
 
     Vector3 PositionVector = new Vector3(0, 0, 1);
     Vector3 UpVector = new Vector3(0, 1, 0);
     Vector3 RightVector = new Vector3(1, 0, 0);
+
+    Vector3 PreviousMoveDegree = Vector3.zero;
+    int BounceOff = 0;
+
+    float MoveSpeed = 0;
+
+    ArrayList Inventory = new ArrayList();
     
     void Start()
     {
@@ -20,29 +24,35 @@ public class PlayerController : MonoBehaviour
 
 	void Update ()
     {
-        float moveSpeed = Time.deltaTime * 15.0f;
-        float turnSpeed = Time.deltaTime * 30.0f;
+        if(BounceOff > 0)
+        {
+            BounceOff--;
+            RotateSurfacePosition(Time.deltaTime * -PreviousMoveDegree * (BounceOff / 30.0f));
+        }
+        else
+        {
+            UpdateMovement();
+        }
+    }
+
+    void UpdateMovement()
+    {
         Vector3 moveDegree = Vector3.zero;
+        moveDegree.y += Input.GetAxis("Vertical");
+        moveDegree.x += Input.GetAxis("Horizontal");
 
-        if(Input.GetKey(KeyCode.W))
-        {
-            moveDegree.y += moveSpeed;
-        }
-        if(Input.GetKey(KeyCode.S))
-        {
-            moveDegree.y -= moveSpeed;
-        }
+        if (moveDegree.Equals(Vector3.zero))
+            MoveSpeed = Mathf.Lerp(MoveSpeed, 0, 0.1f);
+        else
+            MoveSpeed = Mathf.Lerp(MoveSpeed, 70.0f, 0.1f);
 
-        if(Input.GetKey(KeyCode.A))
-        {
-            moveDegree.x += moveSpeed;
-        }
-        if(Input.GetKey(KeyCode.D))
-        {
-            moveDegree.x -= moveSpeed;
-        }
+        float moveSpeed = Time.deltaTime * MoveSpeed;
+        float turnSpeed = Time.deltaTime * 90.0f;
 
-        if(Input.GetKey(KeyCode.Q))
+        moveDegree.Normalize();
+        moveDegree *= moveSpeed;
+
+        if (Input.GetKey(KeyCode.Q))
         {
             moveDegree.z += turnSpeed;
         }
@@ -58,6 +68,9 @@ public class PlayerController : MonoBehaviour
     {
         if (!moveDegree.Equals(Vector3.zero))
         {
+            if(BounceOff <= 0)
+                PreviousMoveDegree = moveDegree * (1.0f / Time.deltaTime);
+
             if (moveDegree.y != 0)
             {
                 Quaternion RotAroundRight = Quaternion.AngleAxis(moveDegree.y, RightVector);
@@ -66,7 +79,7 @@ public class PlayerController : MonoBehaviour
             }
             if (moveDegree.x != 0)
             {
-                Quaternion RotAroundUp = Quaternion.AngleAxis(moveDegree.x, UpVector);
+                Quaternion RotAroundUp = Quaternion.AngleAxis(-moveDegree.x, UpVector);
                 PositionVector = RotAroundUp * PositionVector;
                 RightVector = RotAroundUp * RightVector;
             }
@@ -82,7 +95,7 @@ public class PlayerController : MonoBehaviour
 
     void SnapToPlanetSurface()
     {
-        Vector3 RayEnd = PlanetSurface.gameObject.transform.position;
+        Vector3 RayEnd = Planet.Instance.gameObject.transform.position;
         Vector3 RayStart = RayEnd - PositionVector * 10000.0f;
         
         RaycastHit Hit;
@@ -91,5 +104,41 @@ public class PlayerController : MonoBehaviour
             transform.position = Hit.point;
             transform.rotation = Quaternion.LookRotation(UpVector, -PositionVector);
         }
+    }
+
+    //-- Collision --//
+    void OnTriggerEnter(Collider col)
+    {
+        Collectable collectable = col.gameObject.GetComponentInParent<Collectable>();
+        if(collectable)
+        {
+            if(collectable.Collected(this))
+            {
+                Inventory.Add(collectable);
+                RefreshInventoryUI();
+            }
+        }
+        else if(BounceOff <= 0)
+        {
+            BounceOff = 40;
+            MoveSpeed = 0;
+        }
+    }
+
+    public void RemoveItem(Collectable item)
+    {
+        Inventory.Remove(item);
+        RefreshInventoryUI();
+    }
+
+    public void RefreshInventoryUI()
+    {
+        int c = 0;
+        string[] items = new string[Inventory.Count];
+
+        for(int i = 0; i < Inventory.Count; i++)
+            items[c++] = ((Collectable)Inventory[i]).DisplayName;
+
+        UIManager.Instance.SetInventory(items);
     }
 }
