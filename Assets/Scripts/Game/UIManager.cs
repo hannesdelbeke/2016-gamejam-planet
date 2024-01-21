@@ -9,12 +9,16 @@ public class UIManager : MonoBehaviour
     void Start()
     {
         Instance = this;
+
+        DontDestroyOnLoad(LevelText.gameObject.transform.parent.gameObject);
     }
 
     [SerializeField]
     Text LevelText;
     [SerializeField]
     Text InventoryText;
+    [SerializeField]
+    Text WinText;
 
     public void SetLevel(int level)
     {
@@ -42,5 +46,16 @@ public class UIManager : MonoBehaviour
                 InventoryText.text += items[i];
             }
         }
+    }
+
+    public void ShowVictory()
+    {
+        if (!LevelText || !InventoryText || !WinText)
+            return;
+
+        LevelText.gameObject.SetActive(false);
+        InventoryText.gameObject.SetActive(false);
+
+        WinText.gameObject.SetActive(true);
     }
 }

@@ -3,26 +3,30 @@ using System.Collections;
 
 enum CollectableLightSensitivity { None, OnlyLight, OnlyDark };
 
-public class Collectable : MonoBehaviour
+public class Collectable : LightSensitiveObject
 {
     [SerializeField]
     public string DisplayName = "";
 
-    [SerializeField]
-    CollectableLightSensitivity LightSensitivityWorld = CollectableLightSensitivity.None;
     [SerializeField]
     CollectableLightSensitivity LightSensitivityHeld = CollectableLightSensitivity.None;
 
     [SerializeField]
     GameObject RenderObject = null;
 
+    [SerializeField]
+    ParticleSystem CollectEffect;
+    [SerializeField]
+    ParticleSystem SpawnEffect;
+    [SerializeField]
+    ParticleSystem LostEffect;
+
     bool IsCollected = false;
     PlayerController Collector = null;
-    bool IsHidden = false;
 
-	void Update ()
+	protected override void Update ()
     {
-	    if(IsCollected)
+	    if(IsCollected && Collector)
         {
             bool isInLight = DaylightController.Instance.IsLit(Collector.gameObject);
 
@@ -42,27 +46,9 @@ public class Collectable : MonoBehaviour
         }
         else
         {
-            UpdateWorldLightSensitivity();
+            base.Update();
         }
 	}
-
-    void UpdateWorldLightSensitivity()
-    {
-        bool isInLight = DaylightController.Instance.IsLit(gameObject);
-
-        if (LightSensitivityWorld == CollectableLightSensitivity.None)
-        {
-            // do nothing
-        }
-        else
-        {
-            bool shouldBeHidden =
-                (isInLight && LightSensitivityWorld == CollectableLightSensitivity.OnlyDark) ||
-                (!isInLight && LightSensitivityWorld == CollectableLightSensitivity.OnlyLight);
-
-            SetHidden(shouldBeHidden);
-        }
-    }
 
     public bool isCollectable()
     {
@@ -80,6 +66,14 @@ public class Collectable : MonoBehaviour
         {
             RenderObject.SetActive(false);
         }
+        if(CollectEffect)
+        {
+            ParticleSystem ps = Instantiate<ParticleSystem>(CollectEffect);
+            ps.gameObject.transform.position = transform.position;
+            ps.gameObject.transform.rotation = transform.rotation;
+            ps.Play();
+            Destroy(ps.gameObject, 1);
+        }
         return true;
     }
 
@@ -87,6 +81,14 @@ public class Collectable : MonoBehaviour
     {
         if (Collector)
         {
+            if (LostEffect)
+            {
+                ParticleSystem ps = Instantiate<ParticleSystem>(LostEffect);
+                ps.gameObject.transform.position = Collector.transform.position;
+                ps.gameObject.transform.rotation = Collector.transform.rotation;
+                ps.Play();
+                Destroy(ps.gameObject, 1);
+            }
             Collector.RemoveItem(this);
             Collector = null;
         }
@@ -95,20 +97,15 @@ public class Collectable : MonoBehaviour
         {
             RenderObject.SetActive(true);
         }
-        UpdateWorldLightSensitivity();
-    }
-    
-    // Hidden when not in correct light in world
-    void SetHidden(bool Hidden)
-    {
-        if (IsHidden == Hidden)
-            return;
 
-        IsHidden = Hidden;
-        // todo effect
-        if (RenderObject)
+        if (SpawnEffect)
         {
-            RenderObject.SetActive(!Hidden);
+            ParticleSystem ps = Instantiate<ParticleSystem>(SpawnEffect);
+            ps.gameObject.transform.position = transform.position;
+            ps.gameObject.transform.rotation = transform.rotation;
+            ps.Play();
+            Destroy(ps.gameObject, 1);
         }
+
     }
 }

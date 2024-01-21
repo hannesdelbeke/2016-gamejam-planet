@@ -3,6 +3,9 @@ using System.Collections;
 
 public class DaylightController : MonoBehaviour
 {
+    [SerializeField]
+    float DayLength = 10;
+
     public static DaylightController Instance;
     
 	// Use this for initialization
@@ -14,7 +17,7 @@ public class DaylightController : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
     {
-        transform.position = Quaternion.Euler(Time.deltaTime * -10.0f, 0, 0) * transform.position;
+        transform.position = Quaternion.Euler(Time.deltaTime * (360.0f / DayLength), 0, 0) * transform.position;
         transform.rotation = Quaternion.FromToRotation(Vector3.forward, -transform.position);
 	}
 

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 [System.Serializable]
@@ -9,58 +10,35 @@ public struct Level
 
 public class GameManager : MonoBehaviour
 {
+    [SerializeField]
+    string[] levelsByName;
 
-    public Level[] levels;
-    public PlayerController PlayerPrefab;
-
-    int currentLevel = 0;
-
-    Planet CurrentLevelPlanet;
-    PlayerController CurrentPlayer;
+    int currentLevel = -1;
             
 	void Start ()
     {
-        
+        DontDestroyOnLoad(gameObject);
 	}
 	
 	void Update ()
     {
-        if(!CurrentLevelPlanet /*|| CurrentLevelPlanet.Complete()*/)
+        if(!Planet.Instance || Planet.Instance.FullyComplete())
         {
-            ClearCurrentLevel();
             currentLevel++;
-            if(levels.Length > currentLevel)
+            if(levelsByName.Length > currentLevel)
             {
-                StartLevel(currentLevel, levels[currentLevel - 1]);
+                StartLevel(currentLevel + 1, levelsByName[currentLevel]);
             }
             else
             {
                 GameComplete();
             }            
-        }
-	    
+        }	    
 	}
 
-    void ClearCurrentLevel()
+    void StartLevel(int LevelNumber, string name)
     {
-        if(CurrentLevelPlanet)
-        {
-            Destroy(CurrentLevelPlanet);
-            CurrentLevelPlanet = null;
-        }
-        if(CurrentPlayer)
-        {
-            Destroy(CurrentPlayer);
-            CurrentPlayer = null;
-        }
-    }
-
-    void StartLevel(int LevelNumber, Level level)
-    {
-        ClearCurrentLevel();
-
-        CurrentLevelPlanet = Instantiate<Planet>(level.planet);
-        CurrentPlayer = Instantiate<PlayerController>(PlayerPrefab);
+        SceneManager.LoadScene(name);
 
         UIManager.Instance.SetLevel(LevelNumber);
     }
@@ -68,5 +46,6 @@ public class GameManager : MonoBehaviour
     void GameComplete()
     {
         // todo
+        UIManager.Instance.ShowVictory();
     }
 }
